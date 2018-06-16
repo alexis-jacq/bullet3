@@ -41,7 +41,13 @@ class WalkerBaseBulletEnv(MJCFBaseBulletEnv):
 		return r
 	
 	def _isDone(self):
-		return self._alive < 0
+		"Provides the terminal states"
+		state = self.robot.calc_state()
+		done = self._alive < 0
+		if not np.isfinite(state).all():
+			print("~INF~", state)
+			done = True
+		return done
 
 	def move_robot(self, init_x, init_y, init_z):
 		"Used by multiplayer stadium to move sideways, to another running lane."
@@ -62,12 +68,9 @@ class WalkerBaseBulletEnv(MJCFBaseBulletEnv):
 			self.scene.global_step()
 
 		state = self.robot.calc_state()  # also calculates self.joints_at_limit
-
+		
 		self._alive = float(self.robot.alive_bonus(state[0]+self.robot.initial_z, self.robot.body_rpy[1]))   # state[0] is body height above ground, body_rpy[1] is pitch
 		done = self._isDone()
-		if not np.isfinite(state).all():
-			print("~INF~", state)
-			done = True
 
 		potential_old = self.potential
 		self.potential = self.robot.calc_potential()
@@ -146,6 +149,13 @@ class AntBulletEnv(WalkerBaseBulletEnv):
 	def __init__(self):
 		self.robot = Ant()
 		WalkerBaseBulletEnv.__init__(self, self.robot)
+		
+	def _isDone(self):
+		state = self.robot.calc_state()
+		r,p,y = self.robot.body_rpy
+		x_quaternion = np.cos(y) * np.sin(r) * np.cos(p) - np.sin(y) * np.cos(r) * np.sin(p)
+		notdone = np.isfinite(state).all() and x_quaternion >= 0.2 and x_quaternion <= 1.0
+		return not notdone
 
 class HumanoidBulletEnv(WalkerBaseBulletEnv):
 	def __init__(self, robot=Humanoid()):
@@ -153,6 +163,11 @@ class HumanoidBulletEnv(WalkerBaseBulletEnv):
 		WalkerBaseBulletEnv.__init__(self, self.robot)
 		self.electricity_cost  = 4.25*WalkerBaseBulletEnv.electricity_cost
 		self.stall_torque_cost = 4.25*WalkerBaseBulletEnv.stall_torque_cost
+		
+	def _isDone(self):
+		state = self.robot.calc_state()
+		z = state[0] + self.robot.initial_z
+		return bool((z < 1.0) of (z > 2.0))
 
 class HumanoidFlagrunBulletEnv(HumanoidBulletEnv):
 	random_yaw = True
