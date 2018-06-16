@@ -152,9 +152,8 @@ class AntBulletEnv(WalkerBaseBulletEnv):
 		
 	def _isDone(self):
 		state = self.robot.calc_state()
-		r,p,y = self.robot.body_rpy
-		x_quaternion = np.cos(y) * np.sin(r) * np.cos(p) - np.sin(y) * np.cos(r) * np.sin(p)
-		notdone = np.isfinite(state).all() and x_quaternion >= 0.2 and x_quaternion <= 1.0
+		z = state[0] + self.robot.initial_z
+		notdone = np.isfinite(state).all() and z >= 0.25
 		return not notdone
 
 class HumanoidBulletEnv(WalkerBaseBulletEnv):
@@ -167,7 +166,7 @@ class HumanoidBulletEnv(WalkerBaseBulletEnv):
 	def _isDone(self):
 		state = self.robot.calc_state()
 		z = state[0] + self.robot.initial_z
-		return bool((z < 1.0) of (z > 2.0))
+		return bool(z >= 0.78)
 
 class HumanoidFlagrunBulletEnv(HumanoidBulletEnv):
 	random_yaw = True
